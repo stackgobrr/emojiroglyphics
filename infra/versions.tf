@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket = "stackgobrr-projects-terraform-state"
-    key    = "spa-template/terraform.tfstate"
+    key    = "emojiroglyphics/terraform.tfstate"
     region = "eu-west-2"
   }
 }
@@ -20,7 +20,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "spa-template"
+      Project     = "emojiroglyphics"
       Environment = var.environment
       ManagedBy   = "Terraform"
     }
@@ -34,7 +34,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "spa-template"
+      Project     = "emojiroglyphics"
       Environment = var.environment
       ManagedBy   = "Terraform"
     }

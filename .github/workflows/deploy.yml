@@ -107,4 +107,4 @@ jobs:
           echo "Deployment successful!"
           echo "Website URL: $WEBSITE_URL"
           echo ""
-          echo "::notice title=Deployment Complete::SPA Template is live at $WEBSITE_URL"
+          echo "::notice title=Deployment Complete::Emojiroglyphics is live at $WEBSITE_URL"

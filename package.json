@@ -1,7 +1,7 @@
 {
-  "name": "spa-template",
+  "name": "emojiroglyphics",
   "version": "1.0.0",
-  "description": "Template for single-page applications with React + Vite",
+  "description": "A 3-player collaborative game where players decode emoji hieroglyphics",
   "type": "module",
   "scripts": {
     "dev": "vite",

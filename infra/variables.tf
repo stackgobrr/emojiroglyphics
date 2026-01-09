@@ -13,13 +13,13 @@ variable "environment" {
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
-  default     = "spa-template"
+  default     = "emojiroglyphics"
 }
 
 variable "domain_name" {
   description = "Custom domain name for the site"
   type        = string
-  default     = "spa-template.stackgobrr.com"
+  default     = "emojiroglyphics.stackgobrr.com"
 }
 
 variable "hosted_zone_id" {
