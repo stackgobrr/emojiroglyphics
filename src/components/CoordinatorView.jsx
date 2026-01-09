@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function CoordinatorView({ gameState, setGameState }) {
   const [guess, setGuess] = useState('')
   const [attempts, setAttempts] = useState([])
+  const [activeCall, setActiveCall] = useState(null) // 'reader' or 'cipher'
+  const [isConnecting, setIsConnecting] = useState(false)
+  const localStreamRef = useRef(null)
+  const peerConnectionRef = useRef(null)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -28,6 +32,82 @@ function CoordinatorView({ gameState, setGameState }) {
 
     setGuess('')
   }
+
+  const startCall = async (targetRole) => {
+    if (activeCall) return // Already in a call
+
+    setIsConnecting(true)
+    setActiveCall(targetRole)
+
+    try {
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      localStreamRef.current = stream
+
+      // Signal that coordinator wants to call this role
+      setGameState(prev => ({
+        ...prev,
+        voiceCall: {
+          caller: 'coordinator',
+          target: targetRole,
+          status: 'ringing',
+          timestamp: Date.now()
+        }
+      }))
+
+      setIsConnecting(false)
+    } catch (error) {
+      console.error('Failed to get microphone access:', error)
+      alert('Failed to access microphone. Please check permissions.')
+      endCall()
+    }
+  }
+
+  const endCall = () => {
+    // Stop local stream
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop())
+      localStreamRef.current = null
+    }
+
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close()
+      peerConnectionRef.current = null
+    }
+
+    // Clear call state
+    setActiveCall(null)
+    setIsConnecting(false)
+
+    // Clear voice call from game state
+    setGameState(prev => ({
+      ...prev,
+      voiceCall: null
+    }))
+  }
+
+  // Listen for call state changes
+  useEffect(() => {
+    if (!gameState.voiceCall) {
+      // Call ended by other player
+      if (activeCall) {
+        endCall()
+      }
+    }
+  }, [gameState.voiceCall])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close()
+      }
+    }
+  }, [])
 
   return (
     <div style={{
@@ -65,6 +145,101 @@ function CoordinatorView({ gameState, setGameState }) {
             <li>You win when you guess the correct message!</li>
           </ul>
         </div>
+      </div>
+
+      <div style={{
+        backgroundColor: '#16213e',
+        padding: '2rem',
+        borderRadius: '12px',
+        marginBottom: '2rem'
+      }}>
+        <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem' }}>Voice Chat:</h3>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => startCall('reader')}
+            disabled={activeCall !== null || isConnecting}
+            style={{
+              flex: 1,
+              minWidth: '200px',
+              padding: '1rem',
+              backgroundColor: activeCall === 'reader' ? '#667eea' : (activeCall ? '#444' : '#667eea'),
+              color: 'white',
+              border: activeCall === 'reader' ? '2px solid #8899ff' : 'none',
+              borderRadius: '8px',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              cursor: (activeCall && activeCall !== 'reader') ? 'not-allowed' : 'pointer',
+              opacity: (activeCall && activeCall !== 'reader') ? 0.5 : 1,
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <span style={{ fontSize: '1.5rem' }}>📖</span>
+            {activeCall === 'reader' ? (isConnecting ? 'Connecting...' : '🔊 Speaking with Reader') : 'Call Reader'}
+          </button>
+
+          <button
+            onClick={() => startCall('cipher')}
+            disabled={activeCall !== null || isConnecting}
+            style={{
+              flex: 1,
+              minWidth: '200px',
+              padding: '1rem',
+              backgroundColor: activeCall === 'cipher' ? '#f093fb' : (activeCall ? '#444' : '#f093fb'),
+              color: 'white',
+              border: activeCall === 'cipher' ? '2px solid #ff9fff' : 'none',
+              borderRadius: '8px',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              cursor: (activeCall && activeCall !== 'cipher') ? 'not-allowed' : 'pointer',
+              opacity: (activeCall && activeCall !== 'cipher') ? 0.5 : 1,
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <span style={{ fontSize: '1.5rem' }}>🔑</span>
+            {activeCall === 'cipher' ? (isConnecting ? 'Connecting...' : '🔊 Speaking with Cipher Holder') : 'Call Cipher Holder'}
+          </button>
+        </div>
+
+        {activeCall && (
+          <button
+            onClick={endCall}
+            style={{
+              width: '100%',
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#e94560',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'transform 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+          >
+            📞 End Call
+          </button>
+        )}
+
+        <p style={{
+          marginTop: '1rem',
+          marginBottom: 0,
+          fontSize: '0.85rem',
+          opacity: 0.7,
+          textAlign: 'center'
+        }}>
+          {activeCall ? '💡 You can only talk to one player at a time' : '💡 Click to start a voice call with a player'}
+        </p>
       </div>
 
       {gameState.gameWon ? (

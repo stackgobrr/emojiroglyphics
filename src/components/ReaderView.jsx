@@ -1,4 +1,79 @@
-function ReaderView({ gameState }) {
+import { useState, useEffect, useRef } from 'react'
+
+function ReaderView({ gameState, setGameState }) {
+  const [incomingCall, setIncomingCall] = useState(false)
+  const [inCall, setInCall] = useState(false)
+  const localStreamRef = useRef(null)
+  const peerConnectionRef = useRef(null)
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (gameState.voiceCall && gameState.voiceCall.target === 'reader') {
+      if (gameState.voiceCall.status === 'ringing') {
+        setIncomingCall(true)
+      }
+    } else {
+      setIncomingCall(false)
+      if (inCall) {
+        endCall()
+      }
+    }
+  }, [gameState.voiceCall])
+
+  const answerCall = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      localStreamRef.current = stream
+      setInCall(true)
+      setIncomingCall(false)
+
+      // Update call status to connected
+      setGameState(prev => ({
+        ...prev,
+        voiceCall: {
+          ...prev.voiceCall,
+          status: 'connected'
+        }
+      }))
+    } catch (error) {
+      console.error('Failed to get microphone access:', error)
+      alert('Failed to access microphone. Please check permissions.')
+    }
+  }
+
+  const declineCall = () => {
+    setIncomingCall(false)
+    setGameState(prev => ({
+      ...prev,
+      voiceCall: null
+    }))
+  }
+
+  const endCall = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop())
+      localStreamRef.current = null
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close()
+      peerConnectionRef.current = null
+    }
+    setInCall(false)
+    setIncomingCall(false)
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close()
+      }
+    }
+  }, [])
+
   return (
     <div style={{
       maxWidth: '900px',
@@ -36,6 +111,95 @@ function ReaderView({ gameState }) {
           </ul>
         </div>
       </div>
+
+      {incomingCall && (
+        <div style={{
+          backgroundColor: '#16213e',
+          padding: '2rem',
+          borderRadius: '12px',
+          marginBottom: '2rem',
+          border: '3px solid #4facfe',
+          animation: 'pulse 1.5s ease-in-out infinite'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📞</div>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#4facfe' }}>Incoming Call</h3>
+            <p style={{ margin: '0 0 1.5rem 0', opacity: 0.8 }}>
+              Coordinator wants to talk to you
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={answerCall}
+                style={{
+                  padding: '1rem 2rem',
+                  backgroundColor: '#4facfe',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ✅ Answer
+              </button>
+              <button
+                onClick={declineCall}
+                style={{
+                  padding: '1rem 2rem',
+                  backgroundColor: '#e94560',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ❌ Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inCall && (
+        <div style={{
+          backgroundColor: '#16213e',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          marginBottom: '2rem',
+          border: '2px solid #4facfe',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>🔊</span>
+            <span style={{ fontWeight: 'bold', color: '#4facfe' }}>
+              In call with Coordinator
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              endCall()
+              setGameState(prev => ({ ...prev, voiceCall: null }))
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#e94560',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            📞 End Call
+          </button>
+        </div>
+      )}
 
       <div style={{
         backgroundColor: '#16213e',
