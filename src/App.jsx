@@ -82,21 +82,44 @@ function App() {
                 }}>{gameKey}</code>
               </p>
             </div>
-            <button
-              onClick={resetGame}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#e94560',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Leave Game
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {gameState.voiceCall && gameState.voiceCall.status === 'connected' && (
+                <div style={{
+                  backgroundColor: '#16213e',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  border: `2px solid ${gameState.voiceCall.target === 'reader' ? '#667eea' : '#f093fb'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.9rem'
+                }}>
+                  <span style={{ fontSize: '1rem' }}>🔊</span>
+                  <span>
+                    Coordinator ↔ <strong style={{
+                      color: gameState.voiceCall.target === 'reader' ? '#667eea' : '#f093fb'
+                    }}>
+                      {gameState.voiceCall.target === 'reader' ? 'Reader' : 'Cipher Holder'}
+                    </strong>
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={resetGame}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#e94560',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Leave Game
+              </button>
+            </div>
           </div>
 
           {role === 'reader' && <ReaderView gameState={gameState} setGameState={setGameState} gameKey={gameKey} />}
