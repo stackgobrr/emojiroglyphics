@@ -201,6 +201,26 @@ function ReaderView({ gameState, setGameState }) {
         </div>
       )}
 
+      {gameState.voiceCall && gameState.voiceCall.target === 'cipher' && gameState.voiceCall.status === 'connected' && (
+        <div style={{
+          backgroundColor: '#16213e',
+          padding: '1rem',
+          borderRadius: '12px',
+          marginBottom: '2rem',
+          border: '2px solid #f093fb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          opacity: 0.8
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>💬</span>
+          <span style={{ fontSize: '0.9rem' }}>
+            Coordinator is talking to <strong style={{ color: '#f093fb' }}>Cipher Holder</strong>
+          </span>
+        </div>
+      )}
+
       <div style={{
         backgroundColor: '#16213e',
         padding: '2rem',
