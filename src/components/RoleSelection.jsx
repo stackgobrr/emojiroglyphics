@@ -1,6 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { generateCipher, getRandomMessage, encryptMessage } from '../utils/cipher'
 
 function RoleSelection({ gameKey, onSelectRole, gameState, setGameState }) {
+  // Initialize game when component mounts (only once per game key)
+  useEffect(() => {
+    if (!gameState.cipher) {
+      const { cipher, reverseCipher } = generateCipher()
+      const message = getRandomMessage()
+      const encrypted = encryptMessage(message, cipher)
+
+      setGameState(prev => ({
+        ...prev,
+        cipher,
+        reverseCipher,
+        currentMessage: message,
+        encryptedMessage: encrypted,
+        isGameActive: true
+      }))
+    }
+  }, [gameKey])
+
   const roles = [
     {
       id: 'reader',
