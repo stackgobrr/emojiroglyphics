@@ -1,0 +1,14 @@
+# AWS Configuration
+aws_region  = "eu-west-2"
+environment = "prod"
+
+# Project Configuration
+project_name = "spa-template"
+domain_name  = "spa-template.stackgobrr.com"
+
+# Route53 Configuration
+# Set this via environment variable: export TF_VAR_hosted_zone_id="Z..."
+# hosted_zone_id = "Z..."
+
+# CloudFront Configuration
+cloudfront_price_class = "PriceClass_100" # US, Canada, Europe

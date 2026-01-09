@@ -1,0 +1,110 @@
+name: Deploy to AWS S3/CloudFront
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-west-2
+  NODE_VERSION: '18'
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build application
+        uses: stackgobrr/common-github-actions/actions/node-build-test@main
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: '.'
+          build-command: 'npm run build'
+          upload-artifacts: 'true'
+          artifact-name: 'dist'
+          artifact-path: 'dist/'
+
+  deploy:
+    name: Deploy to AWS
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Configure AWS credentials
+        uses: stackgobrr/common-github-actions/actions/aws-configure@main
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          auth-method: 'oidc'
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: Deploy infrastructure
+        uses: stackgobrr/common-github-actions/actions/terraform-deploy@main
+        with:
+          terraform-version: '1.14.1'
+          working-directory: 'infra'
+          terraform-wrapper: 'false'
+          auto-approve: 'true'
+        env:
+          TF_VAR_hosted_zone_id: ${{ vars.HOSTED_ZONE_ID }}
+
+      - name: Get S3 bucket name
+        id: get-bucket
+        run: |
+          cd infra
+          BUCKET_NAME=$(terraform output -raw s3_bucket_name)
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+
+          DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
+          echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
+      - name: Sync files to S3
+        run: |
+          aws s3 sync dist/ s3://${{ steps.get-bucket.outputs.bucket_name }}/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" \
+            --exclude "*.map"
+
+          # Upload index.html separately with no-cache
+          aws s3 cp dist/index.html s3://${{ steps.get-bucket.outputs.bucket_name }}/index.html \
+            --cache-control "public, max-age=0, must-revalidate"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.get-bucket.outputs.distribution_id }} \
+            --paths "/*"
+
+      - name: Get website URL
+        run: |
+          cd infra
+          WEBSITE_URL=$(terraform output -raw website_url)
+
+          echo "Deployment successful!"
+          echo "Website URL: $WEBSITE_URL"
+          echo ""
+          echo "::notice title=Deployment Complete::SPA Template is live at $WEBSITE_URL"

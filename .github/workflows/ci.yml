@@ -1,0 +1,29 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build application
+        uses: stackgobrr/common-github-actions/actions/node-build-test@main
+        with:
+          node-version: '18'
+          working-directory: '.'
+          build-command: 'npm run build'
+          upload-artifacts: 'true'
+          artifact-name: 'pr-build-${{ github.event.pull_request.number }}'
+          artifact-path: 'dist/'
